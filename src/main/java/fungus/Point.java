@@ -6,8 +6,9 @@ import java.util.Random;
 
 public class Point {
 
-	public final static Double[] growthProbabilities = new Double[] {0.0, 0.125, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-//	public final static Double[] growthProbabilities = new Double[] {0.0, 0.125, 0.25, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0};
+//	public final static Double[] growthProbabilities = new Double[] {0.0, 0.125, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+//	public final static Double[] growthProbabilities = new Double[] {0.0, 0.125, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+	public final static Double[] growthProbabilities = new Double[] {0.0, 0.125, 0.25, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0};
 	public final static State[] states = new State[] {State.EMPTY, State.OCCUPIED};
 	public final static Random RNG = new Random();
 
