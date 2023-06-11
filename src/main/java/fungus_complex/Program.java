@@ -1,4 +1,4 @@
-package fungus;
+package fungus_complex;
 
 import javax.swing.*;
 

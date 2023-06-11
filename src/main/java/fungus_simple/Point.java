@@ -1,4 +1,4 @@
-package fungus;
+package fungus_simple;
 
 import java.util.ArrayList;
 import java.util.Random;

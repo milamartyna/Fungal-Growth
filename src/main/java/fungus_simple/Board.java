@@ -1,4 +1,4 @@
-package fungus;
+package fungus_simple;
 
 import javax.swing.*;
 import javax.swing.event.MouseInputListener;
