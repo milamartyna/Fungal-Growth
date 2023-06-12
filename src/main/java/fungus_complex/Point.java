@@ -10,7 +10,6 @@ import static fungus_complex.Direction.*;
 
 public class Point {
 
-	public final static State[] states = new State[] {State.EMPTY, State.OCCUPIED};
 	public final static Random RNG = new Random();
 	public static int foodPacketSize = 6;
 	public static double continuousFoodProbability = 0.25;
@@ -38,6 +37,12 @@ public class Point {
 		activeFungus = null;
 	}
 
+	/**
+	 * First stage of an iteration. Generates a packet of food in a point for each food type. Replenishes food only if
+	 * the stockpile of given type is empty.
+	 *
+	 * @param isSeasonal should seasonal generation occur
+	 */
 	public void supplyFood(boolean isSeasonal) {
 		for (Map.Entry<Food, Integer> entry : foodAmounts.entrySet()) {
 			if (entry.getValue() > 0) continue;
@@ -47,6 +52,12 @@ public class Point {
 		}
 	}
 
+	/**
+	 * Second stage of an iteration. For each dormant fungus in the cell checks if accepted food type is present
+	 * in the cell. If so, calls a method for comparing the competitor with potential current active fungus.
+	 * Additionally, for B and b species checks if food Alpha is present in the cell. If it is, then they can't become
+	 * active.
+	 */
 	public void resolveCompetition() {
 		for (AbstractFungus fungus : presentFungi) {
 			if (!fungus.isDormant) continue;
@@ -62,6 +73,13 @@ public class Point {
 		}
 	}
 
+	/**
+	 * If the cell doesn't have an active fungus, the challenger becomes the active fungus. If there is one checks which
+	 * one is dominant. If the challenger is dominant, it becomes the active fungus and the previously active fungus
+	 * becomes dormant.
+	 *
+	 * @param fungus challenger for being active in this cell
+	 */
 	private void checkForDominance(AbstractFungus fungus) {
 		if (activeFungus == null) {
 			fungus.isDormant = false;
@@ -75,6 +93,9 @@ public class Point {
 		}
 	}
 
+	/**
+	 * Third stage of an iteration. For each exploratory mycelium in this cell with active parent expands it.
+	 */
 	public void expandMycelia() {
 		for (ExploratoryMycelium mycelium : presentExploratoryMycelia) {
 			if (mycelium.getParentFungus().isDormant) continue;
@@ -82,6 +103,16 @@ public class Point {
 		}
 	}
 
+	/**
+	 * Generates a list of available directions for the mycelium to take (it can't go back where it came from) and
+	 * selects one of them.
+	 * Then iterates over points going in the selected direction and plants dormant fungus of the same class as parent
+	 * fungus when there isn't already a fungus of this class. When encountering a cell with non-zero amount of food
+	 * accepted by myceliums parent fungus it terminates the iteration and the mycelium dies off.
+	 * If such a cell wasn't encountered the mycelium is transferred to last processed point.
+	 *
+	 * @param mycelium mycelium to expand.
+	 */
 	private void expandMycelium(ExploratoryMycelium mycelium) {
 		List<Direction> availableDirections = Stream
 				.of(Direction.values())
@@ -89,6 +120,7 @@ public class Point {
 				.toList();
 
 		Direction direction = availableDirections.get(RNG.nextInt(availableDirections.size()));
+		mycelium.previousDirection = direction;
 		int distance = 0;
 		Point finalPoint = this;
 		boolean arrivedToDestination = false;
@@ -117,6 +149,11 @@ public class Point {
 
 	}
 
+	/**
+	 * Fourth stage of an iteration. For each dormant fungus increase its dormant age and kill it if the maximum dormant
+	 * age was reached. Decrement the amount of food accepted by the active fungus and make it dormant on food
+	 * depletion.
+	 */
 	public void grow() {
 		for (AbstractFungus fungus : presentFungi) {
 			if (fungus.isDormant) {
@@ -127,6 +164,7 @@ public class Point {
 				}
  			}
 		}
+		if (activeFungus == null) return;
 		decrementFoodAmount(activeFungus.getAcceptedFood());
 		if (foodAmounts.get(activeFungus.getAcceptedFood()) == 0) activeFungus.isDormant = true;
 	}
