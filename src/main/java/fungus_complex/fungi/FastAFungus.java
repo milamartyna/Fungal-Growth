@@ -2,6 +2,7 @@ package fungus_complex.fungi;
 
 import fungus_complex.Food;
 import fungus_complex.Point;
+import fungus_complex.State;
 
 public class FastAFungus extends AbstractFungus {
     public FastAFungus(Point occupiedPoint) {
@@ -14,5 +15,10 @@ public class FastAFungus extends AbstractFungus {
     @Override
     public AbstractFungus createNewFungus(Point point) {
         return new FastAFungus(point);
+    }
+
+    @Override
+    public State getCorrelatedState() {
+        return State.FAST_A;
     }
 }

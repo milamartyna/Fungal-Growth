@@ -1,5 +1,8 @@
 package fungus_complex;
 
+import fungus_complex.fungi.AbstractFungus;
+import fungus_complex.fungi.FastAFungus;
+
 import javax.swing.*;
 import javax.swing.event.MouseInputListener;
 import java.awt.*;
@@ -12,6 +15,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	private Point[][] points;
 	private int size = 10;
 	public State editState = State.EMPTY;
+	private static final int N = 4; // amount of neighbours in each direction
 
 	public Board(int length, int height) {
 		addMouseListener(this);
@@ -22,10 +26,15 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		initialize(length, height);
 	}
 
-	public void iteration() {	
+	public void iteration() {
 		for (int x = 1; x < points.length - 1; ++x)
-			for (int y = 1; y < points[x].length - 1; ++y)
+			for (int y = 1; y < points[x].length - 1; ++y){
+				points[x][y].supplyFood(false);
+				points[x][y].resolveCompetition();
+				points[x][y].expandMycelia();
+				points[x][y].grow();
 				points[x][y].scheduleNextState();
+			}
 
 		for (int x = 1; x < points.length - 1; ++x)
 			for (int y = 1; y < points[x].length - 1; ++y)
@@ -51,16 +60,19 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 			}
 		}
 
+		// right now we're adding 4 neighbours in each direction
+		int neiX, neiY;
 		for (int x = 1; x < points.length-1; ++x) {
 			for (int y = 1; y < points[x].length-1; ++y) {
-				points[x][y].addNeighbor(points[x][y-1]);
-				points[x][y].addNeighbor(points[x+1][y]);
-				points[x][y].addNeighbor(points[x][y+1]);
-				points[x][y].addNeighbor(points[x-1][y]);
-				points[x][y].addNeighbor(points[x+1][y-1]);
-				points[x][y].addNeighbor(points[x+1][y+1]);
-				points[x][y].addNeighbor(points[x-1][y+1]);
-				points[x][y].addNeighbor(points[x-1][y-1]);
+				for(Direction direction : Direction.values()){
+					for(int i = 1; i <= N; i++){
+						neiX = x + i * direction.getX();
+						neiY = y + i * direction.getY();
+						if(neiX > 0 && neiX < points.length-1 && neiY > 0 && neiY < points[neiX].length-1){
+							points[x][y].addNeighbor(direction, points[neiX][neiY]);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -92,13 +104,23 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 			g.drawLine(firstX, y, lastX, y);
 			y += gridSpace;
 		}
-
+		// FIXME we could probably have different colors for dormant fungus
 		for (x = 0; x < points.length; ++x) {
 			for (y = 0; y < points[x].length; ++y) {
 				if (points[x][y].getState() == State.EMPTY) {
-					g.setColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
-				} else if (points[x][y].getState() == State.OCCUPIED) {
-					g.setColor(new Color(1.0f, 0.0f, 0.0f, 0.7f));
+					g.setColor(new Color(220, 220, 220));
+				} else if (points[x][y].getState() == State.FAST_A) {
+					g.setColor(new Color(214, 24, 43));
+				}else if (points[x][y].getState() == State.SLOW_A) {
+					g.setColor(new Color(219, 101, 113));
+				}else if(points[x][y].getState() == State.FAST_B){
+					g.setColor(new Color(252, 195, 5));
+				}else if(points[x][y].getState() == State.SLOW_B){
+					g.setColor(new Color(240, 213, 122));
+				} else if (points[x][y].getState() == State.BETA) {
+					g.setColor(new Color(11, 82, 13));
+				}else if (points[x][y].getState() == State.ALPHA){
+					g.setColor(new Color(138, 227, 141));
 				}
 				g.fillRect((x * size) + 1, (y * size) + 1, (size - 1), (size - 1));
 			}
@@ -111,6 +133,9 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		int y = e.getY() / size;
 		if ((x < points.length) && (x > 0) && (y < points[x].length) && (y > 0)) {
 			points[x][y].setState(editState);
+			AbstractFungus fungus = editState.getCorrelatedFungus(points[x][y]);
+			if(fungus != null)
+				points[x][y].placeFungus(fungus);
 			points[x][y].setNextState(editState);
 			this.repaint();
 		}

@@ -15,6 +15,9 @@ public class Point {
 	public static double continuousFoodProbability = 0.25;
 	public static double seasonalFoodProbability = 0.95;
 	public static int maximumDormantAge = 12;
+	public static State[] states = State.values();
+	public State curState = State.EMPTY;
+	public State nextState = State.EMPTY;
 
 	private final Map<Direction, ArrayList<Point>> neighbours = new HashMap<>(Map.of(
 			NORTH, new ArrayList<>(),
@@ -96,11 +99,15 @@ public class Point {
 	/**
 	 * Third stage of an iteration. For each exploratory mycelium in this cell with active parent expands it.
 	 */
+	//here was an issue with changing the presentExploratoryMycelia while iterating over it
 	public void expandMycelia() {
+		ExploratoryMycelium myceliumToRemove = null;
 		for (ExploratoryMycelium mycelium : presentExploratoryMycelia) {
 			if (mycelium.getParentFungus().isDormant) continue;
-			expandMycelium(mycelium);
+			myceliumToRemove = expandMycelium(mycelium);
 		}
+		if(myceliumToRemove != null)
+			presentExploratoryMycelia.remove(myceliumToRemove);
 	}
 
 	/**
@@ -113,7 +120,7 @@ public class Point {
 	 *
 	 * @param mycelium mycelium to expand.
 	 */
-	private void expandMycelium(ExploratoryMycelium mycelium) {
+	private ExploratoryMycelium expandMycelium(ExploratoryMycelium mycelium) {
 		List<Direction> availableDirections = Stream
 				.of(Direction.values())
 				.filter(d -> mycelium.previousDirection != d)
@@ -144,9 +151,8 @@ public class Point {
 			distance++;
 			if (distance >= mycelium.getSpeed()) break;
 		}
-		presentExploratoryMycelia.remove(mycelium);
 		if (!arrivedToDestination) finalPoint.presentExploratoryMycelia.add(mycelium);
-
+		return mycelium;
 	}
 
 	/**
@@ -166,7 +172,10 @@ public class Point {
 		}
 		if (activeFungus == null) return;
 		decrementFoodAmount(activeFungus.getAcceptedFood());
-		if (foodAmounts.get(activeFungus.getAcceptedFood()) == 0) activeFungus.isDormant = true;
+		if (foodAmounts.get(activeFungus.getAcceptedFood()) == 0){
+			activeFungus.isDormant = true;
+			activeFungus = null;
+		}
 	}
 
 	private void decrementFoodAmount(Food food) {
@@ -177,7 +186,45 @@ public class Point {
 		neighbours.get(direction).add(nei);
 	}
 
+	/**
+	 * The user creates fungus and places it in the board, its set as the active fungus
+	 */
 	public void placeFungus(AbstractFungus fungus) {
 		presentFungi.add(fungus);
+		activeFungus = fungus;
+		presentExploratoryMycelia.add(fungus.getExploratoryMycelium());
+	}
+
+	public State getState(){
+		return curState;
+	}
+
+	public void setState(State editState){
+		curState = editState;
+	}
+
+	public void setNextState(State editState){
+		nextState = editState;
+	}
+
+	public void scheduleNextState(){
+		if(activeFungus != null) {
+			nextState = activeFungus.getCorrelatedState();
+		}else if(presentFungi.size() != 0) {
+			for (AbstractFungus fungus : presentFungi) {
+				nextState = fungus.getCorrelatedState();
+			}
+		// FIXME if we have the board filled with food, we see only ALPHA
+		}else if(foodAmounts.get(Food.ALPHA) > 0 && foodAmounts.get(Food.BETA) <= foodAmounts.get(Food.ALPHA)){
+			nextState = State.ALPHA;
+		}else if(foodAmounts.get(Food.BETA) > 0 && foodAmounts.get(Food.BETA) > foodAmounts.get(Food.ALPHA)){
+			nextState = State.BETA;
+		}else{
+			nextState =  State.EMPTY;
+		}
+	}
+
+	public void progressState() {
+		curState = nextState;
 	}
 }

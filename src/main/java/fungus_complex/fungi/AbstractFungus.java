@@ -3,6 +3,7 @@ package fungus_complex.fungi;
 import fungus_complex.ExploratoryMycelium;
 import fungus_complex.Food;
 import fungus_complex.Point;
+import fungus_complex.State;
 
 public abstract class AbstractFungus {
     protected int speed;
@@ -48,5 +49,11 @@ public abstract class AbstractFungus {
 
     public void zeroDormantAge() {
         dormantAge = 0;
+    }
+
+    public abstract State getCorrelatedState();
+
+    public ExploratoryMycelium getExploratoryMycelium(){
+        return exploratoryMycelium;
     }
 }
