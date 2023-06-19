@@ -7,7 +7,7 @@ import fungus_complex.State;
 public class FastAFungus extends AbstractFungus {
     public FastAFungus(Point occupiedPoint) {
         super(occupiedPoint);
-        speed = 4;
+        speed = 3;
         isDominant = false;
         acceptedFood = Food.ALPHA;
     }

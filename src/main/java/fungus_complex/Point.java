@@ -9,12 +9,15 @@ import static fungus_complex.Direction.*;
 
 
 public class Point {
+	public final int x;
+	public final int y;
 
-	public final static Random RNG = new Random();
 	public static int foodPacketSize = 6;
-	public static double continuousFoodProbability = 0.25;
+	public static double continuousFoodProbability = 0.001;
 	public static double seasonalFoodProbability = 0.95;
-	public static int maximumDormantAge = 12;
+	public static int maximumDormantAge = 6;
+	public static int seasonLength = 30;
+	public final static Random RNG = new Random();
 	public static State[] states = State.values();
 	public State curState = State.EMPTY;
 	public State nextState = State.EMPTY;
@@ -27,9 +30,17 @@ public class Point {
 	));
 
 	private final Map<Food, Integer> foodAmounts = new HashMap<>(Map.of(Food.ALPHA, 0, Food.BETA, 0));
-	private final Set<AbstractFungus> presentFungi = new HashSet<>();
-	private final Set<ExploratoryMycelium> presentExploratoryMycelia = new HashSet<>();
+	public final Set<AbstractFungus> presentFungi = new HashSet<>();
+	public Set<ExploratoryMycelium> presentExploratoryMycelia = new HashSet<>();
+	private final Set<ExploratoryMycelium> presentExploratoryMyceliaNextIteration = new HashSet<>();
 	private AbstractFungus activeFungus;
+
+	public Point(int x, int y) {
+		this.x = x;
+		this.y = y;
+		foodAmounts.put(Food.ALPHA, foodPacketSize / 2);
+		foodAmounts.put(Food.BETA, foodPacketSize / 2);
+	}
 
 	
 	public void clear() {
@@ -99,15 +110,14 @@ public class Point {
 	/**
 	 * Third stage of an iteration. For each exploratory mycelium in this cell with active parent expands it.
 	 */
-	//here was an issue with changing the presentExploratoryMycelia while iterating over it
 	public void expandMycelia() {
-		ExploratoryMycelium myceliumToRemove = null;
-		for (ExploratoryMycelium mycelium : presentExploratoryMycelia) {
-			if (mycelium.getParentFungus().isDormant) continue;
-			myceliumToRemove = expandMycelium(mycelium);
+		for (ExploratoryMycelium mycelium : new HashSet<>(presentExploratoryMycelia)) {
+			if (mycelium.getParentFungus().isDormant) {
+				presentExploratoryMyceliaNextIteration.add(mycelium);
+				continue;
+			}
+			expandMycelium(mycelium);
 		}
-		if(myceliumToRemove != null)
-			presentExploratoryMycelia.remove(myceliumToRemove);
 	}
 
 	/**
@@ -120,7 +130,7 @@ public class Point {
 	 *
 	 * @param mycelium mycelium to expand.
 	 */
-	private ExploratoryMycelium expandMycelium(ExploratoryMycelium mycelium) {
+	private void expandMycelium(ExploratoryMycelium mycelium) {
 		List<Direction> availableDirections = Stream
 				.of(Direction.values())
 				.filter(d -> mycelium.previousDirection != d)
@@ -128,31 +138,41 @@ public class Point {
 
 		Direction direction = availableDirections.get(RNG.nextInt(availableDirections.size()));
 		mycelium.previousDirection = direction;
-		int distance = 0;
+		int distanceExpanded = 0;
 		Point finalPoint = this;
 		boolean arrivedToDestination = false;
 		Class<? extends AbstractFungus> myceliumSpecies = mycelium.getParentFungus().getClass();
 
+//		System.out.println("branching out from " + this);
 		for (Point point : neighbours.get(direction)) {
 			finalPoint = point;
 			if (point.presentFungi.stream().anyMatch(f -> f.getClass() == myceliumSpecies)) { // species the same as mycelium is already present in this point
-				if (point.foodAmounts.get(mycelium.getParentFungus().getAcceptedFood()) > 0) {
-					arrivedToDestination = true;
-					break;
-				}
+//				if (point.foodAmounts.get(mycelium.getParentFungus().getAcceptedFood()) > 0) {
+//					arrivedToDestination = true;
+//					break;
+//				}
+				continue;
 			}
+//			System.out.println("creating new fungus at " + point);
 			AbstractFungus newFungus = mycelium.createNewFungus(point);
 			point.placeFungus(newFungus);
-			if (point.foodAmounts.get(mycelium.getParentFungus().getAcceptedFood()) > 0) {
-				arrivedToDestination = true;
-				break;
-			}
+//			if (point.foodAmounts.get(mycelium.getParentFungus().getAcceptedFood()) > 0) {
+//				arrivedToDestination = true;
+//				break;
+//			}
 
-			distance++;
-			if (distance >= mycelium.getSpeed()) break;
+			distanceExpanded++;
+			if (distanceExpanded >= mycelium.getSpeed()) break;
 		}
-		if (!arrivedToDestination) finalPoint.presentExploratoryMycelia.add(mycelium);
-		return mycelium;
+		if (!arrivedToDestination) {
+			finalPoint.presentExploratoryMyceliaNextIteration.add(mycelium);
+			mycelium.currentPoint = finalPoint;
+		}
+	}
+
+	public void progressToExpandedMycelia() {
+		presentExploratoryMycelia = new HashSet<>(presentExploratoryMyceliaNextIteration);
+		presentExploratoryMyceliaNextIteration.clear();
 	}
 
 	/**
@@ -161,7 +181,7 @@ public class Point {
 	 * depletion.
 	 */
 	public void grow() {
-		for (AbstractFungus fungus : presentFungi) {
+		for (AbstractFungus fungus : new HashSet<>(presentFungi)) {
 			if (fungus.isDormant) {
 				fungus.incrementDormantAge();
 				if (fungus.getDormantAge() == maximumDormantAge) {
@@ -171,15 +191,26 @@ public class Point {
  			}
 		}
 		if (activeFungus == null) return;
+
 		decrementFoodAmount(activeFungus.getAcceptedFood());
-		if (foodAmounts.get(activeFungus.getAcceptedFood()) == 0){
+		if (foodAmounts.get(activeFungus.getAcceptedFood()) == 0) {
 			activeFungus.isDormant = true;
+//			System.out.println("food ran out at cell " + this);
 			activeFungus = null;
 		}
 	}
 
 	private void decrementFoodAmount(Food food) {
 		foodAmounts.put(food, foodAmounts.get(food) - 1);
+//		System.out.println("decrementing food at " + this);
+	}
+
+	public boolean removeExploratoryMycelium(ExploratoryMycelium mycelium) {
+		return presentExploratoryMycelia.remove(mycelium);
+	}
+
+	public void addExploratoryMyceliumAtNextIteration(ExploratoryMycelium mycelium) {
+		presentExploratoryMyceliaNextIteration.add(mycelium);
 	}
 
 	public void addNeighbor(Direction direction, Point nei) {
@@ -189,10 +220,18 @@ public class Point {
 	/**
 	 * The user creates fungus and places it in the board, its set as the active fungus
 	 */
+	public void placeFungusManually(AbstractFungus fungus) {
+		presentFungi.add(fungus);
+//		activeFungus = fungus;
+//		presentExploratoryMycelia.add(fungus.getExploratoryMycelium());
+	}
+
 	public void placeFungus(AbstractFungus fungus) {
 		presentFungi.add(fungus);
-		activeFungus = fungus;
-		presentExploratoryMycelia.add(fungus.getExploratoryMycelium());
+	}
+
+	public boolean isFungusActive() {
+		return activeFungus != null;
 	}
 
 	public State getState(){
@@ -208,9 +247,9 @@ public class Point {
 	}
 
 	public void scheduleNextState(){
-		if(activeFungus != null) {
+		if (activeFungus != null) {
 			nextState = activeFungus.getCorrelatedState();
-		}else if(presentFungi.size() != 0) {
+		} else if (presentFungi.size() > 0) {
 			for (AbstractFungus fungus : presentFungi) {
 				nextState = fungus.getCorrelatedState();
 			}
@@ -226,5 +265,10 @@ public class Point {
 
 	public void progressState() {
 		curState = nextState;
+	}
+
+	@Override
+	public String toString() {
+		return "(" + x + ", " + y + ")";
 	}
 }

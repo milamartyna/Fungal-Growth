@@ -10,7 +10,7 @@ public abstract class AbstractFungus {
     protected boolean isDominant;
     protected Food acceptedFood;
 
-    public boolean isDormant = false;
+    public boolean isDormant = true;
     private int dormantAge = 0;
 
     protected final Point occupiedPoint;
@@ -24,7 +24,7 @@ public abstract class AbstractFungus {
     public abstract AbstractFungus createNewFungus(Point point);
 
     public void die() {
-
+        exploratoryMycelium.die();
     }
 
     public int getSpeed() {

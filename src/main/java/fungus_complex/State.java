@@ -15,4 +15,11 @@ public enum State {
             case EMPTY, ALPHA, BETA -> null;
         };
     }
+
+    public boolean representsAFungus() {
+        return switch (this) {
+            case FAST_A, FAST_B, SLOW_A, SLOW_B -> true;
+            default -> false;
+        };
+    }
 }
