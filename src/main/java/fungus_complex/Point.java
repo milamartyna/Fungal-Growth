@@ -201,8 +201,8 @@ public class Point {
 		presentFungi.add(fungus);
 	}
 
-	public boolean isFungusActive() {
-		return activeFungus != null;
+	public AbstractFungus getActiveFungus() {
+		return activeFungus;
 	}
 
 	public State getVisualState(){

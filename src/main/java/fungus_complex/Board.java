@@ -8,12 +8,19 @@ import java.awt.*;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Board extends JComponent implements MouseInputListener, ComponentListener {
 	private static final long serialVersionUID = 1L;
 	private Point[][] points;
 	private int size = 5;
 	private int currentIteration = 0;
+	private final File csvOutputFile = new File("output.csv");
 	public State editState = State.EMPTY;
 	private static final int N = 4; // amount of neighbours in each direction
 
@@ -52,7 +59,33 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 				point.updateVisualState();
 
 		currentIteration++;
+		logFungiCounts();
+
 		this.repaint();
+	}
+
+	private void logFungiCounts() {
+		try (PrintWriter pw = new PrintWriter(new FileWriter(csvOutputFile, true))) {
+			HashMap<State, Integer> fungusCounts = new HashMap<>(Map.of(
+					State.FAST_A, 0,
+					State.FAST_B, 0,
+					State.SLOW_A, 0,
+					State.SLOW_B, 0
+			));
+
+			for (Point[] pointsRow : points)
+				for (Point point : pointsRow) {
+					if (point.getActiveFungus() == null) continue;
+					State fungusSpecies = point.getActiveFungus().getCorrelatedState();
+					fungusCounts.put(fungusSpecies, fungusCounts.get(fungusSpecies) + 1);
+				}
+			pw.print(fungusCounts.get(State.FAST_A) + ",");
+			pw.print(fungusCounts.get(State.FAST_B) + ",");
+			pw.print(fungusCounts.get(State.SLOW_A) + ",");
+			pw.print(fungusCounts.get(State.SLOW_B) + "\n");
+		} catch (IOException exception) {
+			System.out.println(exception.getMessage());
+		}
 	}
 
 	public void clear() {
@@ -65,6 +98,10 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
 	private void initialize(int length, int height) {
 		points = new Point[length][height];
+		try {
+			new PrintWriter(csvOutputFile).close();
+		}
+		catch (Exception ignored) {}
 
 		for (int x = 0; x < points.length; ++x) {
 			for (int y = 0; y < points[x].length; ++y) {
@@ -99,25 +136,25 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	}
 
 	private void drawNetting(Graphics g, int gridSpace) {
-		Insets insets = getInsets();
-		int firstX = insets.left;
-		int firstY = insets.top;
-		int lastX = this.getWidth() - insets.right;
-		int lastY = this.getHeight() - insets.bottom;
+//		Insets insets = getInsets();
+//		int firstX = insets.left;
+//		int firstY = insets.top;
+//		int lastX = this.getWidth() - insets.right;
+//		int lastY = this.getHeight() - insets.bottom;
 
-		int x = firstX;
-		while (x < lastX) {
-			g.drawLine(x, firstY, x, lastY);
-			x += gridSpace;
-		}
-
-		int y = firstY;
-		while (y < lastY) {
-			g.drawLine(firstX, y, lastX, y);
-			y += gridSpace;
-		}
-		for (x = 0; x < points.length; ++x) {
-			for (y = 0; y < points[x].length; ++y) {
+//		int x = firstX;
+//		while (x < lastX) {
+//			g.drawLine(x, firstY, x, lastY);
+//			x += gridSpace;
+//		}
+//
+//		int y = firstY;
+//		while (y < lastY) {
+//			g.drawLine(firstX, y, lastX, y);
+//			y += gridSpace;
+//		}
+		for (int x = 0; x < points.length; ++x) {
+			for (int y = 0; y < points[x].length; ++y) {
 				Color cellColor = switch (points[x][y].getVisualState()) {
 					case EMPTY -> new Color(220, 220, 220);
 					case FAST_A -> new Color(214, 24, 43);
@@ -127,11 +164,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 					case ALPHA -> new Color(138, 227, 141);
 					case BETA -> new Color(27, 80, 143);
 				};
-				if (!points[x][y].isFungusActive() && points[x][y].getVisualState().representsAFungus()) {
+				if (points[x][y].getActiveFungus() == null && points[x][y].getVisualState().representsAFungus()) {
 					cellColor = cellColor.darker();
 				}
 				g.setColor(cellColor);
-				g.fillRect((x * size) + 1, (y * size) + 1, (size - 1), (size - 1));
+				g.fillRect((x * size) + 1, (y * size) + 1, (size), (size));
 			}
 		}
 
