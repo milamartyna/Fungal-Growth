@@ -141,9 +141,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		int x = e.getX() / size;
 		int y = e.getY() / size;
 		if ((x < points.length) && (x > 0) && (y < points[x].length) && (y > 0)) {
-			AbstractFungus fungus = editState.getCorrelatedFungus(points[x][y]);
-			if (fungus != null && points[x][y].presentFungi.stream().noneMatch(f -> f.getClass() == fungus.getClass()))
+			Class<? extends AbstractFungus> fungusClass = editState.getCorrelatedFungusClass();
+			if (fungusClass != null && points[x][y].presentFungi.stream().noneMatch(f -> f.getClass() == fungusClass)) {
+				AbstractFungus fungus = editState.getCorrelatedFungus(points[x][y]);
 				points[x][y].placeFungus(fungus);
+			}
 			points[x][y].setVisualState(editState);
 			this.repaint();
 		}

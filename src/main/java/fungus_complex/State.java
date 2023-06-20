@@ -16,6 +16,16 @@ public enum State {
         };
     }
 
+    public Class<? extends AbstractFungus> getCorrelatedFungusClass() {
+        return switch (this){
+            case FAST_A -> FastAFungus.class;
+            case FAST_B -> FastBFungus.class;
+            case SLOW_A -> SlowAFungus.class;
+            case SLOW_B -> SlowBFungus.class;
+            case EMPTY, ALPHA, BETA -> null;
+        };
+    }
+
     public boolean representsAFungus() {
         return switch (this) {
             case FAST_A, FAST_B, SLOW_A, SLOW_B -> true;
