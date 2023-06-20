@@ -3,7 +3,6 @@ package fungus_complex;
 import fungus_complex.fungi.AbstractFungus;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 import static fungus_complex.Direction.*;
 
@@ -19,8 +18,7 @@ public class Point {
 	public static int seasonLength = 30;
 	public final static Random RNG = new Random();
 	public static State[] states = State.values();
-	public State curState = State.EMPTY;
-	public State nextState = State.EMPTY;
+	public State visualState = State.EMPTY;
 
 	private final Map<Direction, ArrayList<Point>> neighbours = new HashMap<>(Map.of(
 			NORTH, new ArrayList<>(),
@@ -121,45 +119,26 @@ public class Point {
 	}
 
 	/**
-	 * Generates a list of available directions for the mycelium to take (it can't go back where it came from) and
-	 * selects one of them.
-	 * Then iterates over points going in the selected direction and plants dormant fungus of the same class as parent
-	 * fungus when there isn't already a fungus of this class. When encountering a cell with non-zero amount of food
-	 * accepted by myceliums parent fungus it terminates the iteration and the mycelium dies off.
-	 * If such a cell wasn't encountered the mycelium is transferred to last processed point.
+	 * Iterates over points going in the randomly selected direction and plants dormant fungus of the same class as parent
+	 * fungus when there isn't already a fungus of this class. Then mycelium is transferred to last processed point.
 	 *
 	 * @param mycelium mycelium to expand.
 	 */
 	private void expandMycelium(ExploratoryMycelium mycelium) {
-		List<Direction> availableDirections = Stream
-				.of(Direction.values())
-				.filter(d -> mycelium.previousDirection != d)
-				.toList();
-
-		Direction direction = availableDirections.get(RNG.nextInt(availableDirections.size()));
+		Direction direction = Direction.values()[RNG.nextInt(values().length)];
 		mycelium.previousDirection = direction;
 		int distanceExpanded = 0;
 		Point finalPoint = this;
 		boolean arrivedToDestination = false;
 		Class<? extends AbstractFungus> myceliumSpecies = mycelium.getParentFungus().getClass();
 
-//		System.out.println("branching out from " + this);
 		for (Point point : neighbours.get(direction)) {
 			finalPoint = point;
 			if (point.presentFungi.stream().anyMatch(f -> f.getClass() == myceliumSpecies)) { // species the same as mycelium is already present in this point
-//				if (point.foodAmounts.get(mycelium.getParentFungus().getAcceptedFood()) > 0) {
-//					arrivedToDestination = true;
-//					break;
-//				}
 				continue;
 			}
-//			System.out.println("creating new fungus at " + point);
 			AbstractFungus newFungus = mycelium.createNewFungus(point);
 			point.placeFungus(newFungus);
-//			if (point.foodAmounts.get(mycelium.getParentFungus().getAcceptedFood()) > 0) {
-//				arrivedToDestination = true;
-//				break;
-//			}
 
 			distanceExpanded++;
 			if (distanceExpanded >= mycelium.getSpeed()) break;
@@ -195,14 +174,12 @@ public class Point {
 		decrementFoodAmount(activeFungus.getAcceptedFood());
 		if (foodAmounts.get(activeFungus.getAcceptedFood()) == 0) {
 			activeFungus.isDormant = true;
-//			System.out.println("food ran out at cell " + this);
 			activeFungus = null;
 		}
 	}
 
 	private void decrementFoodAmount(Food food) {
 		foodAmounts.put(food, foodAmounts.get(food) - 1);
-//		System.out.println("decrementing food at " + this);
 	}
 
 	public boolean removeExploratoryMycelium(ExploratoryMycelium mycelium) {
@@ -220,12 +197,6 @@ public class Point {
 	/**
 	 * The user creates fungus and places it in the board, its set as the active fungus
 	 */
-	public void placeFungusManually(AbstractFungus fungus) {
-		presentFungi.add(fungus);
-//		activeFungus = fungus;
-//		presentExploratoryMycelia.add(fungus.getExploratoryMycelium());
-	}
-
 	public void placeFungus(AbstractFungus fungus) {
 		presentFungi.add(fungus);
 	}
@@ -234,37 +205,29 @@ public class Point {
 		return activeFungus != null;
 	}
 
-	public State getState(){
-		return curState;
+	public State getVisualState(){
+		return visualState;
 	}
 
-	public void setState(State editState){
-		curState = editState;
+	public void setVisualState(State visualState){
+		this.visualState = visualState;
 	}
 
-	public void setNextState(State editState){
-		nextState = editState;
-	}
-
-	public void scheduleNextState(){
+	public void updateVisualState() {
 		if (activeFungus != null) {
-			nextState = activeFungus.getCorrelatedState();
+			visualState = activeFungus.getCorrelatedState();
 		} else if (presentFungi.size() > 0) {
 			for (AbstractFungus fungus : presentFungi) {
-				nextState = fungus.getCorrelatedState();
+				visualState = fungus.getCorrelatedState();
 			}
 		// FIXME if we have the board filled with food, we see only ALPHA
-		}else if(foodAmounts.get(Food.ALPHA) > 0 && foodAmounts.get(Food.BETA) <= foodAmounts.get(Food.ALPHA)){
-			nextState = State.ALPHA;
-		}else if(foodAmounts.get(Food.BETA) > 0 && foodAmounts.get(Food.BETA) > foodAmounts.get(Food.ALPHA)){
-			nextState = State.BETA;
-		}else{
-			nextState =  State.EMPTY;
+		} else if (foodAmounts.get(Food.ALPHA) > 0 && foodAmounts.get(Food.BETA) <= foodAmounts.get(Food.ALPHA)){
+			visualState = State.ALPHA;
+		} else if (foodAmounts.get(Food.BETA) > 0 && foodAmounts.get(Food.BETA) > foodAmounts.get(Food.ALPHA)){
+			visualState = State.BETA;
+		} else {
+			visualState =  State.EMPTY;
 		}
-	}
-
-	public void progressState() {
-		curState = nextState;
 	}
 
 	@Override

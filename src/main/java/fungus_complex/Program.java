@@ -8,7 +8,6 @@ public class Program extends JFrame {
 	private GUI gof;
 
 	public Program() {
-		System.out.println("aaa");
 		setTitle("Fungal Growth");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
