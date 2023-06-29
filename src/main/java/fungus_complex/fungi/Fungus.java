@@ -10,6 +10,12 @@ public abstract class Fungus {
     protected boolean isDominant;
     protected Food acceptedFood;
 
+    protected int preferredTemperature = 3;
+    protected int preferredPH = 4;
+    protected boolean isTemperatureSensitive = false;
+    protected boolean isPHSensitive = false;
+    private int maximumDormantAge = Point.maximumDormantAge;
+
     public boolean isDormant = true;
     private int dormantAge = 0;
 
@@ -22,7 +28,20 @@ public abstract class Fungus {
         occupiedPoint.placeFungus(this);
     }
 
-    public abstract Fungus createNewFungus(Point point);
+    protected void applyEnvironmentEffects() {
+        if (isTemperatureSensitive) {
+            int temperaturesDifference = Math.abs(occupiedPoint.getTemperature() - preferredTemperature);
+            if (temperaturesDifference == 0) speed++;
+            if (temperaturesDifference >= 2) speed--;
+        }
+        if (isPHSensitive) {
+            int pHDifference = Math.abs(occupiedPoint.getPH() - preferredPH);
+            int dormantAgeUnit = maximumDormantAge / 3;
+            maximumDormantAge += (2 - pHDifference) * dormantAgeUnit;
+        }
+    }
+
+    public abstract void createNewFungus(Point point);
 
     public void die() {
         exploratoryMycelium.die();
@@ -54,7 +73,4 @@ public abstract class Fungus {
 
     public abstract State getCorrelatedState();
 
-    public ExploratoryMycelium getExploratoryMycelium(){
-        return exploratoryMycelium;
-    }
 }

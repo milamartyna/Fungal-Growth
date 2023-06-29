@@ -10,11 +10,12 @@ public class FastBFungus extends Fungus {
         speed = 4;
         isDominant = false;
         acceptedFood = Food.BETA;
+        applyEnvironmentEffects();
     }
 
     @Override
-    public Fungus createNewFungus(Point point) {
-        return new FastBFungus(point);
+    public void createNewFungus(Point point) {
+        new FastBFungus(point);
     }
 
     @Override

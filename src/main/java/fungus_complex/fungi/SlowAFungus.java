@@ -7,14 +7,18 @@ import fungus_complex.State;
 public class SlowAFungus extends Fungus {
     public SlowAFungus(Point occupiedPoint) {
         super(occupiedPoint);
-        speed = 1;
+        speed = 2;
         isDominant = true;
         acceptedFood = Food.ALPHA;
+
+        preferredTemperature = 4;
+//        isTemperatureSensitive = true;
+        applyEnvironmentEffects();
     }
 
     @Override
-    public Fungus createNewFungus(Point point) {
-        return new SlowAFungus(point);
+    public void createNewFungus(Point point) {
+        new SlowAFungus(point);
     }
 
     @Override

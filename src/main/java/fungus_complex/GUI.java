@@ -6,16 +6,20 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.Serial;
 
 public class GUI extends JPanel implements ActionListener, ChangeListener {
+	@Serial
 	private static final long serialVersionUID = 1L;
-	private Timer timer;
+	private final Timer timer;
+	private DataPlotter dataPlotter;
 	private Board board;
 	private JButton start;
 	private JButton clear;
+	private JButton plot;
 	private JComboBox<State> drawType;
 	private JSlider pred;
-	private JFrame frame;
+	private final JFrame frame;
 	private int iterNum = 0;
 	private final int maxDelay = 500;
 	private final int initDelay = 100;
@@ -33,6 +37,8 @@ public class GUI extends JPanel implements ActionListener, ChangeListener {
 
 		JPanel buttonPanel = new JPanel();
 
+		dataPlotter = new DataPlotter();
+
 		start = new JButton("Start");
 		start.setActionCommand("Start");
 		start.addActionListener(this);
@@ -47,7 +53,11 @@ public class GUI extends JPanel implements ActionListener, ChangeListener {
 		pred.addChangeListener(this);
 		pred.setValue(maxDelay - timer.getDelay());
 
-		drawType = new JComboBox<>(Point.states);
+		plot = new JButton("Plot");
+		plot.setActionCommand("plot");
+		plot.addActionListener(this);
+
+		drawType = new JComboBox<>(State.values());
 		drawType.addActionListener(this);
 		drawType.setActionCommand("drawType");
 
@@ -55,39 +65,40 @@ public class GUI extends JPanel implements ActionListener, ChangeListener {
 		buttonPanel.add(clear);
 		buttonPanel.add(drawType);
 		buttonPanel.add(pred);
+		buttonPanel.add(plot);
 
-		board = new Board(1024, 768 - buttonPanel.getHeight());
-		container.add(board, BorderLayout.CENTER);
+		board = new Board(1024, 768 - 70, dataPlotter);
 		container.add(buttonPanel, BorderLayout.SOUTH);
+		container.add(board, BorderLayout.CENTER);
 	}
 
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource().equals(timer)) {
 			iterNum++;
-			frame.setTitle("Fungal Growth (" + Integer.toString(iterNum) + " iteration)");
+			frame.setTitle("Fungal Growth (" + iterNum + " iteration)");
 			board.iteration();
 		} else {
 			String command = e.getActionCommand();
-			if (command.equals("Start")) {
-				if (!running) {
-					timer.start();
-					start.setText("Pause");
-				} else {
-					timer.stop();
-					start.setText("Start");
+			switch (command) {
+				case "Start" -> {
+					if (!running) {
+						timer.start();
+						start.setText("Pause");
+					} else {
+						timer.stop();
+						start.setText("Start");
+					}
+					running = !running;
+					clear.setEnabled(true);
 				}
-				running = !running;
-				clear.setEnabled(true);
-
-			} else if (command.equals("clear")) {
-				iterNum = 0;
-				timer.stop();
-				start.setEnabled(true);
-				board.clear();
-			}
-			else if (command.equals("drawType")){
-				State newType = (State)drawType.getSelectedItem();
-				board.editState = newType;
+				case "clear" -> {
+					iterNum = 0;
+					timer.stop();
+					start.setEnabled(true);
+					board.clear();
+				}
+				case "drawType" -> board.editState = (State) drawType.getSelectedItem();
+				case "plot" -> dataPlotter.loadUI();
 			}
 
 		}

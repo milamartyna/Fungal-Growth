@@ -7,14 +7,15 @@ import fungus_complex.State;
 public class SlowBFungus extends Fungus {
     public SlowBFungus(Point occupiedPoint) {
         super(occupiedPoint);
-        speed = 1;
+        speed = 2;
         isDominant = true;
         acceptedFood = Food.BETA;
+        applyEnvironmentEffects();
     }
 
     @Override
-    public Fungus createNewFungus(Point point) {
-        return new SlowBFungus(point);
+    public void createNewFungus(Point point) {
+        new SlowBFungus(point);
     }
 
     @Override

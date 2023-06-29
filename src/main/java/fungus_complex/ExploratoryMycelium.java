@@ -4,7 +4,6 @@ import fungus_complex.fungi.Fungus;
 
 public class ExploratoryMycelium {
     private final Fungus parentFungus;
-    private final int speed;
 
     public Direction previousDirection;
     public Point currentPoint;
@@ -13,8 +12,6 @@ public class ExploratoryMycelium {
         this.parentFungus = parentFungus;
         this.currentPoint = currentPoint;
         currentPoint.addExploratoryMyceliumAtNextIteration(this);
-//        System.out.println("created new mycelium at " + currentPoint);
-        speed = parentFungus.getSpeed();
     }
 
     public void die() {
@@ -22,15 +19,15 @@ public class ExploratoryMycelium {
     }
 
     public int getSpeed() {
-        return speed;
+        return parentFungus.getSpeed();
     }
 
     public Fungus getParentFungus() {
         return parentFungus;
     }
 
-    public Fungus createNewFungus(Point point) {
-        return parentFungus.createNewFungus(point);
+    public void createNewFungus(Point point) {
+        parentFungus.createNewFungus(point);
     }
 
 }

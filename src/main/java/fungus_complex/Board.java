@@ -8,23 +8,26 @@ import java.awt.*;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Board extends JComponent implements MouseInputListener, ComponentListener {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	private Point[][] points;
-	private int size = 5;
+	private final DataPlotter dataPlotter;
+	private final int size = 5;
 	private int currentIteration = 1;
 	private final File csvOutputFile = new File("output.csv");
 	public State editState = State.EMPTY;
 	private static final int N = 4; // amount of neighbours in each direction
+	private final Map<IterationStage, Long> stagesTotalTime = new HashMap<>(Arrays.stream(IterationStage.values()).collect(Collectors.toMap(element -> element, element -> 0L)));
 
-	public Board(int length, int height) {
+	public Board(int length, int height, DataPlotter dataPlotter) {
+		this.dataPlotter = dataPlotter;
 		addMouseListener(this);
 		addComponentListener(this);
 		addMouseMotionListener(this);
@@ -34,29 +37,18 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	}
 
 	public void iteration() {
-		for (Point[] pointsRow : points)
-			for (Point point : pointsRow)
-				point.supplyFood(currentIteration % Point.seasonLength == 0);
+		for (IterationStage stage : IterationStage.values()) {
+			long start = System.nanoTime();
+			runIterationStage(stage);
+			long finish = System.nanoTime();
+			stagesTotalTime.put(stage, stagesTotalTime.get(stage) + (finish - start) / 1000000);
+		}
 
-		for (Point[] pointsRow : points)
-			for (Point point : pointsRow)
-				point.resolveCompetition();
-
-		for (Point[] pointsRow : points)
-			for (Point point : pointsRow)
-				point.expandMycelia();
-
-		for (Point[] pointsRow : points)
-			for (Point point : pointsRow)
-				point.progressToExpandedMycelia();
-
-		for (Point[] pointsRow : points)
-			for (Point point : pointsRow)
-				point.grow();
-
-		for (Point[] pointsRow : points)
-			for (Point point : pointsRow)
-				point.updateVisualState();
+//		if (currentIteration % 5 == 0) {
+//			System.out.print("Iteration" + currentIteration + "time elapsed: ");
+//			System.out.println(stagesTotalTime.values().stream().mapToLong(Long::longValue).sum());
+//			System.out.println(stagesTotalTime);
+//		}
 
 		currentIteration++;
 		logFungiCounts();
@@ -64,21 +56,40 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		this.repaint();
 	}
 
-	private void logFungiCounts() {
-		try (PrintWriter pw = new PrintWriter(new FileWriter(csvOutputFile, true))) {
-			HashMap<State, Integer> fungusCounts = new HashMap<>(Map.of(
-					State.FAST_A, 0,
-					State.FAST_B, 0,
-					State.SLOW_A, 0,
-					State.SLOW_B, 0
-			));
-
-			for (Point[] pointsRow : points)
-				for (Point point : pointsRow) {
-					if (point.getActiveFungus() == null) continue;
-					State fungusSpecies = point.getActiveFungus().getCorrelatedState();
-					fungusCounts.put(fungusSpecies, fungusCounts.get(fungusSpecies) + 1);
+	private void runIterationStage(IterationStage stage) {
+		for (Point[] pointsRow : points) {
+			for (Point point : pointsRow) {
+				switch (stage) {
+					case SUPPLY_FOOD -> point.supplyFood(currentIteration % Point.seasonLength == 0);
+					case GROW -> point.grow();
+					case RESOLVE_COMPETITION -> point.resolveCompetition();
+					case EXPAND_MYCELIA -> point.expandMycelia();
+					case PROGRESS_MYCELIA -> point.progressToExpandedMycelia();
+					case UPDATE_VISUAL -> point.updateVisualState();
 				}
+			}
+		}
+	}
+
+	private void logFungiCounts() {
+		HashMap<State, Integer> fungusCounts = new HashMap<>(Map.of(
+				State.FAST_A, 0,
+				State.FAST_B, 0,
+				State.SLOW_A, 0,
+				State.SLOW_B, 0
+		));;
+		for (Point[] pointsRow : points)
+			for (Point point : pointsRow) {
+				if (point.getActiveFungus() == null) continue;
+				State fungusSpecies = point.getActiveFungus().getCorrelatedState();
+				fungusCounts.put(fungusSpecies, fungusCounts.get(fungusSpecies) + 1);
+			}
+
+		for (Map.Entry<State, Integer> entry : fungusCounts.entrySet()) {
+			dataPlotter.addData(entry.getKey(), currentIteration, entry.getValue());
+		}
+		try (PrintWriter pw = new PrintWriter(new FileWriter(csvOutputFile, true))) {
+
 			pw.print(fungusCounts.get(State.FAST_A) + ",");
 			pw.print(fungusCounts.get(State.FAST_B) + ",");
 			pw.print(fungusCounts.get(State.SLOW_A) + ",");
@@ -89,10 +100,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	}
 
 	public void clear() {
-		for (int x = 0; x < points.length; ++x)
-			for (int y = 0; y < points[x].length; ++y) {
-				points[x][y].clear();
+		for (Point[] pointsRow : points) {
+			for (Point point : pointsRow) {
+				point.clear();
 			}
+		}
 		this.repaint();
 	}
 
@@ -117,7 +129,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 					for(int i = 1; i <= N; i++){
 						neiX = x + i * direction.getX();
 						neiY = y + i * direction.getY();
-						if (neiX >= 0 && neiX < points.length-1 && neiY >= 0 && neiY < points[neiX].length-1) {
+						if (neiX >= 0 && neiX < points.length && neiY >= 0 && neiY < points[neiX].length) {
 							points[x][y].addNeighbor(direction, points[neiX][neiY]);
 						}
 					}
@@ -137,21 +149,13 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 			g.fillRect(0, 0, this.getWidth(), this.getHeight());
 		}
 		g.setColor(Color.GRAY);
-		drawNetting(g, size);
+		drawNetting(g);
 	}
 
-	private void drawNetting(Graphics g, int gridSpace) {
+	private void drawNetting(Graphics g) {
 		for (int x = 0; x < points.length; ++x) {
 			for (int y = 0; y < points[x].length; ++y) {
-				Color cellColor = switch (points[x][y].getVisualState()) {
-					case EMPTY -> new Color(220, 220, 220);
-					case FAST_A -> new Color(214, 24, 43);
-					case FAST_B -> new Color(252, 195, 5);
-					case SLOW_A -> new Color(196, 51, 112);
-					case SLOW_B -> new Color(102, 147, 12);
-					case ALPHA -> new Color(138, 227, 141);
-					case BETA -> new Color(27, 80, 143);
-				};
+				Color cellColor = points[x][y].getVisualState().getColor();
 				if (points[x][y].getActiveFungus() == null && points[x][y].getVisualState().representsAFungus()) {
 					cellColor = cellColor.darker();
 				}
@@ -180,9 +184,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	}
 
 	public void componentResized(ComponentEvent e) {
-//		int dlugosc = (this.getWidth() / size) + 1;
-//		int wysokosc = (this.getHeight() / size) + 1;
-//		initialize(dlugosc, wysokosc);
+
 	}
 
 	public void mouseDragged(MouseEvent e) {
