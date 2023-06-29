@@ -1,6 +1,6 @@
 package fungus_complex;
 
-import fungus_complex.fungi.AbstractFungus;
+import fungus_complex.fungi.Fungus;
 
 import javax.swing.*;
 import javax.swing.event.MouseInputListener;
@@ -19,7 +19,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	private static final long serialVersionUID = 1L;
 	private Point[][] points;
 	private int size = 5;
-	private int currentIteration = 0;
+	private int currentIteration = 1;
 	private final File csvOutputFile = new File("output.csv");
 	public State editState = State.EMPTY;
 	private static final int N = 4; // amount of neighbours in each direction
@@ -30,7 +30,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		addMouseMotionListener(this);
 		setBackground(Color.WHITE);
 		setOpaque(true);
-		initialize(length, height);
+		initialize(length / size, height / size);
 	}
 
 	public void iteration() {
@@ -98,8 +98,8 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
 	private void initialize(int length, int height) {
 		points = new Point[length][height];
-		try {
-			new PrintWriter(csvOutputFile).close();
+		try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
+			pw.println("Fast A,Fast B,Slow A,Slow B");
 		}
 		catch (Exception ignored) {}
 
@@ -124,6 +124,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 				}
 			}
 		}
+		for (Point[] pointsRow : points)
+			for (Point point : pointsRow)
+				point.updateVisualState();
+
+		repaint();
 	}
 
 	protected void paintComponent(Graphics g) {
@@ -136,23 +141,6 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	}
 
 	private void drawNetting(Graphics g, int gridSpace) {
-//		Insets insets = getInsets();
-//		int firstX = insets.left;
-//		int firstY = insets.top;
-//		int lastX = this.getWidth() - insets.right;
-//		int lastY = this.getHeight() - insets.bottom;
-
-//		int x = firstX;
-//		while (x < lastX) {
-//			g.drawLine(x, firstY, x, lastY);
-//			x += gridSpace;
-//		}
-//
-//		int y = firstY;
-//		while (y < lastY) {
-//			g.drawLine(firstX, y, lastX, y);
-//			y += gridSpace;
-//		}
 		for (int x = 0; x < points.length; ++x) {
 			for (int y = 0; y < points[x].length; ++y) {
 				Color cellColor = switch (points[x][y].getVisualState()) {
@@ -178,10 +166,9 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		int x = e.getX() / size;
 		int y = e.getY() / size;
 		if ((x < points.length) && (x > 0) && (y < points[x].length) && (y > 0)) {
-			Class<? extends AbstractFungus> fungusClass = editState.getCorrelatedFungusClass();
+			Class<? extends Fungus> fungusClass = editState.getCorrelatedFungusClass();
 			if (fungusClass != null && points[x][y].presentFungi.stream().noneMatch(f -> f.getClass() == fungusClass)) {
-				AbstractFungus fungus = editState.getCorrelatedFungus(points[x][y]);
-				points[x][y].placeFungus(fungus);
+				editState.createCorrelatedFungus(points[x][y]);
 			}
 			points[x][y].setVisualState(editState);
 			this.repaint();
@@ -193,9 +180,9 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	}
 
 	public void componentResized(ComponentEvent e) {
-		int dlugosc = (this.getWidth() / size) + 1;
-		int wysokosc = (this.getHeight() / size) + 1;
-		initialize(dlugosc, wysokosc);
+//		int dlugosc = (this.getWidth() / size) + 1;
+//		int wysokosc = (this.getHeight() / size) + 1;
+//		initialize(dlugosc, wysokosc);
 	}
 
 	public void mouseDragged(MouseEvent e) {
@@ -225,5 +212,5 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
 	public void mousePressed(MouseEvent e) {
 	}
-	
+
 }

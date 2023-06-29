@@ -4,7 +4,7 @@ import fungus_complex.Food;
 import fungus_complex.Point;
 import fungus_complex.State;
 
-public class SlowBFungus extends AbstractFungus {
+public class SlowBFungus extends Fungus {
     public SlowBFungus(Point occupiedPoint) {
         super(occupiedPoint);
         speed = 1;
@@ -13,7 +13,7 @@ public class SlowBFungus extends AbstractFungus {
     }
 
     @Override
-    public AbstractFungus createNewFungus(Point point) {
+    public Fungus createNewFungus(Point point) {
         return new SlowBFungus(point);
     }
 

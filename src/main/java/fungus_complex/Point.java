@@ -1,6 +1,6 @@
 package fungus_complex;
 
-import fungus_complex.fungi.AbstractFungus;
+import fungus_complex.fungi.*;
 
 import java.util.*;
 
@@ -11,10 +11,13 @@ public class Point {
 	public final int x;
 	public final int y;
 
+	public static double initialFoodProbability = 0.1;
+	public static double initialFungusProbability = 0.01;
+
 	public static int foodPacketSize = 6;
-	public static double continuousFoodProbability = 0.001;
-	public static double seasonalFoodProbability = 0.95;
-	public static int maximumDormantAge = 6;
+	public static double continuousFoodProbability = 0.005;
+	public static double seasonalFoodProbability = 0;
+	public static int maximumDormantAge = 9;
 	public static int seasonLength = 30;
 	public final static Random RNG = new Random();
 	public static State[] states = State.values();
@@ -28,16 +31,22 @@ public class Point {
 	));
 
 	private final Map<Food, Integer> foodAmounts = new HashMap<>(Map.of(Food.ALPHA, 0, Food.BETA, 0));
-	public final Set<AbstractFungus> presentFungi = new HashSet<>();
+	public final Set<Fungus> presentFungi = new HashSet<>();
 	public Set<ExploratoryMycelium> presentExploratoryMycelia = new HashSet<>();
 	private final Set<ExploratoryMycelium> presentExploratoryMyceliaNextIteration = new HashSet<>();
-	private AbstractFungus activeFungus;
+	private Fungus activeFungus;
+	private int temperature = 3;
+	private int pH = 4;
 
 	public Point(int x, int y) {
 		this.x = x;
 		this.y = y;
-		foodAmounts.put(Food.ALPHA, foodPacketSize / 2);
-		foodAmounts.put(Food.BETA, foodPacketSize / 2);
+		for (Food foodType : foodAmounts.keySet()) {
+			if (RNG.nextFloat() < initialFoodProbability) foodAmounts.put(foodType, foodPacketSize);
+		}
+		for (State fungusType : List.of(State.FAST_A, State.FAST_B, State.SLOW_A, State.SLOW_B)) {
+			if (RNG.nextFloat() < initialFungusProbability) fungusType.createCorrelatedFungus(this);
+		}
 	}
 
 	
@@ -71,7 +80,7 @@ public class Point {
 	 * active.
 	 */
 	public void resolveCompetition() {
-		for (AbstractFungus fungus : presentFungi) {
+		for (Fungus fungus : presentFungi) {
 			if (!fungus.isDormant) continue;
 			if (fungus.getAcceptedFood() == Food.BETA) {
 				if (foodAmounts.get(Food.ALPHA) > 0) continue;
@@ -92,7 +101,7 @@ public class Point {
 	 *
 	 * @param fungus challenger for being active in this cell
 	 */
-	private void checkForDominance(AbstractFungus fungus) {
+	private void checkForDominance(Fungus fungus) {
 		if (activeFungus == null) {
 			fungus.isDormant = false;
 			fungus.zeroDormantAge();
@@ -130,15 +139,14 @@ public class Point {
 		int distanceExpanded = 0;
 		Point finalPoint = this;
 		boolean arrivedToDestination = false;
-		Class<? extends AbstractFungus> myceliumSpecies = mycelium.getParentFungus().getClass();
+		Class<? extends Fungus> myceliumSpecies = mycelium.getParentFungus().getClass();
 
 		for (Point point : neighbours.get(direction)) {
 			finalPoint = point;
 			if (point.presentFungi.stream().anyMatch(f -> f.getClass() == myceliumSpecies)) { // species the same as mycelium is already present in this point
 				continue;
 			}
-			AbstractFungus newFungus = mycelium.createNewFungus(point);
-			point.placeFungus(newFungus);
+			mycelium.createNewFungus(point);
 
 			distanceExpanded++;
 			if (distanceExpanded >= mycelium.getSpeed()) break;
@@ -160,7 +168,7 @@ public class Point {
 	 * depletion.
 	 */
 	public void grow() {
-		for (AbstractFungus fungus : new HashSet<>(presentFungi)) {
+		for (Fungus fungus : new HashSet<>(presentFungi)) {
 			if (fungus.isDormant) {
 				fungus.incrementDormantAge();
 				if (fungus.getDormantAge() == maximumDormantAge) {
@@ -197,11 +205,11 @@ public class Point {
 	/**
 	 * The user creates fungus and places it in the board, its set as the active fungus
 	 */
-	public void placeFungus(AbstractFungus fungus) {
+	public void placeFungus(Fungus fungus) {
 		presentFungi.add(fungus);
 	}
 
-	public AbstractFungus getActiveFungus() {
+	public Fungus getActiveFungus() {
 		return activeFungus;
 	}
 
@@ -217,7 +225,7 @@ public class Point {
 		if (activeFungus != null) {
 			visualState = activeFungus.getCorrelatedState();
 		} else if (presentFungi.size() > 0) {
-			for (AbstractFungus fungus : presentFungi) {
+			for (Fungus fungus : presentFungi) {
 				visualState = fungus.getCorrelatedState();
 			}
 		// FIXME if we have the board filled with food, we see only ALPHA

@@ -5,7 +5,7 @@ import fungus_complex.Food;
 import fungus_complex.Point;
 import fungus_complex.State;
 
-public abstract class AbstractFungus {
+public abstract class Fungus {
     protected int speed;
     protected boolean isDominant;
     protected Food acceptedFood;
@@ -16,12 +16,13 @@ public abstract class AbstractFungus {
     protected final Point occupiedPoint;
     protected final ExploratoryMycelium exploratoryMycelium;
 
-    public AbstractFungus(Point occupiedPoint) {
+    public Fungus(Point occupiedPoint) {
         this.occupiedPoint = occupiedPoint;
         exploratoryMycelium = new ExploratoryMycelium(this, occupiedPoint);
+        occupiedPoint.placeFungus(this);
     }
 
-    public abstract AbstractFungus createNewFungus(Point point);
+    public abstract Fungus createNewFungus(Point point);
 
     public void die() {
         exploratoryMycelium.die();

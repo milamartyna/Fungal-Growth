@@ -1,15 +1,15 @@
 package fungus_complex;
 
-import fungus_complex.fungi.AbstractFungus;
+import fungus_complex.fungi.Fungus;
 
 public class ExploratoryMycelium {
-    private final AbstractFungus parentFungus;
+    private final Fungus parentFungus;
     private final int speed;
 
     public Direction previousDirection;
     public Point currentPoint;
 
-    public ExploratoryMycelium(AbstractFungus parentFungus, Point currentPoint) {
+    public ExploratoryMycelium(Fungus parentFungus, Point currentPoint) {
         this.parentFungus = parentFungus;
         this.currentPoint = currentPoint;
         currentPoint.addExploratoryMyceliumAtNextIteration(this);
@@ -25,11 +25,11 @@ public class ExploratoryMycelium {
         return speed;
     }
 
-    public AbstractFungus getParentFungus() {
+    public Fungus getParentFungus() {
         return parentFungus;
     }
 
-    public AbstractFungus createNewFungus(Point point) {
+    public Fungus createNewFungus(Point point) {
         return parentFungus.createNewFungus(point);
     }
 
