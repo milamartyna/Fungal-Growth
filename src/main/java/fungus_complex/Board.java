@@ -9,9 +9,11 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.io.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class Board extends JComponent implements MouseInputListener, ComponentListener {
@@ -24,7 +26,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	private final File csvOutputFile = new File("output.csv");
 	public State editState = State.EMPTY;
 	private static final int N = 4; // amount of neighbours in each direction
-	private final Map<IterationStage, Long> stagesTotalTime = new HashMap<>(Arrays.stream(IterationStage.values()).collect(Collectors.toMap(element -> element, element -> 0L)));
+	ExecutorService executorService = Executors.newFixedThreadPool(10);
 
 	public Board(int length, int height, DataPlotter dataPlotter) {
 		this.dataPlotter = dataPlotter;
@@ -38,17 +40,9 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
 	public void iteration() {
 		for (IterationStage stage : IterationStage.values()) {
-			long start = System.nanoTime();
-			runIterationStage(stage);
-			long finish = System.nanoTime();
-			stagesTotalTime.put(stage, stagesTotalTime.get(stage) + (finish - start) / 1000000);
+			if (stage == IterationStage.EXPAND_MYCELIA) runIterationStage(stage);
+			else runIterationStageConcurrent(stage);
 		}
-
-//		if (currentIteration % 5 == 0) {
-//			System.out.print("Iteration" + currentIteration + "time elapsed: ");
-//			System.out.println(stagesTotalTime.values().stream().mapToLong(Long::longValue).sum());
-//			System.out.println(stagesTotalTime);
-//		}
 
 		currentIteration++;
 		logFungiCounts();
@@ -58,15 +52,32 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
 	private void runIterationStage(IterationStage stage) {
 		for (Point[] pointsRow : points) {
-			for (Point point : pointsRow) {
-				switch (stage) {
-					case SUPPLY_FOOD -> point.supplyFood(currentIteration % Point.seasonLength == 0);
-					case GROW -> point.grow();
-					case RESOLVE_COMPETITION -> point.resolveCompetition();
-					case EXPAND_MYCELIA -> point.expandMycelia();
-					case PROGRESS_MYCELIA -> point.progressToExpandedMycelia();
-					case UPDATE_VISUAL -> point.updateVisualState();
-				}
+			runIterationStageForRow(stage, pointsRow);
+		}
+	}
+
+	private void runIterationStageConcurrent(IterationStage stage) {
+		List<Callable<Object>> tasks = new ArrayList<>(points.length);
+
+		for (Point[] pointsRow : points) {
+			tasks.add(Executors.callable(() -> runIterationStageForRow(stage, pointsRow)));
+		}
+		try {
+			executorService.invokeAll(tasks);
+		} catch (InterruptedException e) {
+			System.out.println("Interrupted Exception");
+		}
+	}
+
+	private void runIterationStageForRow(IterationStage stage, Point[] pointsRow) {
+		for (Point point : pointsRow) {
+			switch (stage) {
+				case SUPPLY_FOOD -> point.supplyFood(currentIteration % Point.seasonLength == 0);
+				case GROW -> point.grow();
+				case RESOLVE_COMPETITION -> point.resolveCompetition();
+				case EXPAND_MYCELIA -> point.expandMycelia();
+				case PROGRESS_MYCELIA -> point.progressToExpandedMycelia();
+				case UPDATE_VISUAL -> point.updateVisualState();
 			}
 		}
 	}

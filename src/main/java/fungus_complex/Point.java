@@ -117,7 +117,7 @@ public class Point {
 	 * Third stage of an iteration. For each exploratory mycelium in this cell with active parent expands it.
 	 */
 	public void expandMycelia() {
-		for (ExploratoryMycelium mycelium : new ArrayList<>(presentExploratoryMycelia)) {
+		for (ExploratoryMycelium mycelium : new HashSet<>(presentExploratoryMycelia)) {
 			if (mycelium.getParentFungus().isDormant) {
 				presentExploratoryMyceliaNextIteration.add(mycelium);
 				continue;

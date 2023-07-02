@@ -27,14 +27,7 @@ public class DataPlotter extends JFrame {
         fungusPopulationSeries.put(State.SLOW_A, new XYSeries("Slow A"));
         fungusPopulationSeries.put(State.SLOW_B, new XYSeries("Slow B"));
         for (XYSeries series : fungusPopulationSeries.values()) fungusPopulationDataset.addSeries(series);
-    }
 
-    public void addData(State fungusSpecies, int iteration, int population) {
-        fungusPopulationSeries.get(fungusSpecies).add(iteration, population);
-
-    }
-
-    public void loadUI() {
         JFreeChart chart = createChart();
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -57,6 +50,14 @@ public class DataPlotter extends JFrame {
         setTitle("Line chart");
         setLocationRelativeTo(null);
         setSize(800, 600);
+    }
+
+    public void addData(State fungusSpecies, int iteration, int population) {
+        fungusPopulationSeries.get(fungusSpecies).add(iteration, population);
+
+    }
+
+    public void loadUI() {
         setVisible(true);
     }
 
