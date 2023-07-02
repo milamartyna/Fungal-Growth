@@ -26,7 +26,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	private final File csvOutputFile = new File("output.csv");
 	public State editState = State.EMPTY;
 	private static final int N = 4; // amount of neighbours in each direction
-	ExecutorService executorService = Executors.newFixedThreadPool(10);
+	ExecutorService executorService = Executors.newFixedThreadPool(Config.Simulation.threadsNumber);
 
 	public Board(int length, int height, DataPlotter dataPlotter) {
 		this.dataPlotter = dataPlotter;
@@ -72,7 +72,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	private void runIterationStageForRow(IterationStage stage, Point[] pointsRow) {
 		for (Point point : pointsRow) {
 			switch (stage) {
-				case SUPPLY_FOOD -> point.supplyFood(currentIteration % Point.seasonLength == 0);
+				case SUPPLY_FOOD -> point.supplyFood(currentIteration % Config.Simulation.seasonLength == 0);
 				case GROW -> point.grow();
 				case RESOLVE_COMPETITION -> point.resolveCompetition();
 				case EXPAND_MYCELIA -> point.expandMycelia();

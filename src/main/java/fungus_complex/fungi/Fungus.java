@@ -1,20 +1,17 @@
 package fungus_complex.fungi;
 
-import fungus_complex.ExploratoryMycelium;
-import fungus_complex.Food;
-import fungus_complex.Point;
-import fungus_complex.State;
+import fungus_complex.*;
 
 public abstract class Fungus {
     protected int speed;
     protected boolean isDominant;
     protected Food acceptedFood;
 
-    protected int preferredTemperature = 3;
-    protected int preferredPH = 4;
-    protected boolean isTemperatureSensitive = false;
-    protected boolean isPHSensitive = false;
-    private int maximumDormantAge = Point.maximumDormantAge;
+    protected int preferredTemperature;
+    protected int preferredPH;
+    protected boolean isTemperatureSensitive;
+    protected boolean isPHSensitive;
+    private int maximumDormantAge;
 
     public boolean isDormant = true;
     private int dormantAge = 0;

@@ -4,6 +4,7 @@ import fungus_complex.fungi.*;
 
 import java.util.*;
 
+import static fungus_complex.Config.Simulation.*;
 import static fungus_complex.Direction.*;
 
 
@@ -11,14 +12,6 @@ public class Point {
 	public final int x;
 	public final int y;
 
-	public static double initialFoodProbability = 0.1;
-	public static double initialFungusProbability = 0.01;
-
-	public static int foodPacketSize = 6;
-	public static double continuousFoodProbability = 0.02;
-	public static double seasonalFoodProbability = 0;
-	public static int maximumDormantAge = 9;
-	public static int seasonLength = 30;
 	public final static Random RNG = new Random();
 
 	public State visualState = State.EMPTY;
